@@ -26,6 +26,32 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
+static std::string
+getHighestNumericTupleInDirectory(llvm::vfs::FileSystem &VFS,
+                                  llvm::StringRef Directory) {
+  std::string Highest;
+  llvm::VersionTuple HighestTuple;
+
+  std::error_code EC;
+  for (llvm::vfs::directory_iterator DirIt = VFS.dir_begin(Directory, EC),
+                                     DirEnd;
+       !EC && DirIt != DirEnd; DirIt.increment(EC)) {
+    auto Status = VFS.status(DirIt->path());
+    if (!Status || !Status->isDirectory())
+      continue;
+    llvm::StringRef CandidateName = llvm::sys::path::filename(DirIt->path());
+    llvm::VersionTuple Tuple;
+    if (Tuple.tryParse(CandidateName)) // tryParse() returns true on error.
+      continue;
+    if (Tuple > HighestTuple) {
+      HighestTuple = Tuple;
+      Highest = CandidateName.str();
+    }
+  }
+
+  return Highest;
+}
+
 /// MinGW Tools
 void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                            const InputInfo &Output,
@@ -771,6 +797,24 @@ void toolchains::MinGW::addClangTargetOptions(
     if (Arg *A = DriverArgs.getLastArgNoClaim(Opt))
       A->ignoreTargetSpecific();
   }
+}
+
+ToolChain::CXXStdlibType
+toolchains::MinGW::GetCXXStdlibType(const ArgList &Args) const {
+  StringRef Sysroot = llvm::sys::path::parent_path(getDriver().Dir);
+  SmallString<256> CppIncludePath(Sysroot);
+  llvm::sys::path::append(CppIncludePath, "include", "c++", "v1");
+
+  bool HasLibcxx = getVFS().exists(CppIncludePath);
+  bool HasLibstdcxx =
+      !getHighestNumericTupleInDirectory(
+            getVFS(), llvm::sys::path::parent_path(CppIncludePath))
+            .empty();
+
+  if (HasLibcxx && !HasLibstdcxx) {
+    return ToolChain::CST_Libcxx;
+  }
+  return ToolChain::CST_Libstdcxx;
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
