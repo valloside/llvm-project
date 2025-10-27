@@ -35,8 +35,6 @@
 #include <windows.h>
 #endif
 
-#ifdef _MSC_VER
-// Don't support SetupApi on MinGW.
 #define USE_MSVC_SETUP_API
 
 // Make sure this comes before MSVCSetupApi.h
@@ -57,7 +55,6 @@ _COM_SMARTPTR_TYPEDEF(ISetupHelper, __uuidof(ISetupHelper));
 _COM_SMARTPTR_TYPEDEF(IEnumSetupInstances, __uuidof(IEnumSetupInstances));
 _COM_SMARTPTR_TYPEDEF(ISetupInstance, __uuidof(ISetupInstance));
 _COM_SMARTPTR_TYPEDEF(ISetupInstance2, __uuidof(ISetupInstance2));
-#endif
 
 static std::string
 getHighestNumericTupleInDirectory(llvm::vfs::FileSystem &VFS,
