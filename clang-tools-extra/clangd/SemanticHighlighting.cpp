@@ -124,7 +124,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
     return HighlightingKind::Class;
   }
   if (isa<ClassTemplateDecl, RecordDecl, CXXConstructorDecl, ObjCInterfaceDecl,
-          ObjCImplementationDecl>(D))
+          ObjCImplementationDecl, ConceptDecl>(D))
     return HighlightingKind::Class;
   if (isa<ObjCProtocolDecl>(D))
     return HighlightingKind::Interface;
