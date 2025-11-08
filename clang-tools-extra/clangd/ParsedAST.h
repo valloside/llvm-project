@@ -45,6 +45,10 @@ namespace clangd {
 /// Stores and provides access to parsed AST.
 class ParsedAST {
 public:
+  struct TypeAliasMap {
+    llvm::DenseMap<QualType, std::vector<const TypedefNameDecl *>> Map;
+  };
+
   /// Attempts to run Clang and store the parsed AST.
   /// If \p Preamble is non-null it is reused during parsing.
   /// This function does not check if preamble is valid to reuse.
@@ -123,6 +127,8 @@ public:
     return Resolver.get();
   }
 
+  const TypeAliasMap &getTypeAliasMap() const { return AliasMap; }
+
 private:
   ParsedAST(PathRef TUPath, llvm::StringRef Version,
             std::shared_ptr<const PreambleData> Preamble,
@@ -130,7 +136,8 @@ private:
             std::unique_ptr<FrontendAction> Action, syntax::TokenBuffer Tokens,
             MainFileMacros Macros, std::vector<PragmaMark> Marks,
             std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
-            IncludeStructure Includes, include_cleaner::PragmaIncludes PI);
+            IncludeStructure Includes, include_cleaner::PragmaIncludes PI,
+            TypeAliasMap AliasMap);
   Path TUPath;
   std::string Version;
   // In-memory preambles must outlive the AST, it is important that this member
@@ -162,6 +169,7 @@ private:
   IncludeStructure Includes;
   include_cleaner::PragmaIncludes PI;
   std::unique_ptr<HeuristicResolver> Resolver;
+  TypeAliasMap AliasMap;
 };
 
 } // namespace clangd

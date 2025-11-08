@@ -87,6 +87,23 @@ namespace clang {
 namespace clangd {
 namespace {
 
+void findAliasesInContext(const DeclContext *DC,
+                          ParsedAST::TypeAliasMap &TheMap) {
+  if (!DC)
+    return;
+  for (const Decl *D : DC->decls()) {
+    if (!D)
+      continue;
+    if (const TypedefNameDecl *TND = dyn_cast<TypedefNameDecl>(D)) {
+      auto Canonical = TND->getUnderlyingType().getCanonicalType();
+      TheMap.Map[Canonical].push_back(TND);
+    } else if (const NamespaceDecl *NSD = dyn_cast<NamespaceDecl>(D)) {
+      if (!NSD->isAnonymousNamespace())
+        findAliasesInContext(NSD, TheMap);
+    }
+  }
+}
+
 template <class T> std::size_t getUsedBytes(const std::vector<T> &Vec) {
   return Vec.capacity() * sizeof(T);
 }
@@ -757,10 +774,14 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     std::vector<Diag> D = ASTDiags.take(&*CTContext);
     Diags.insert(Diags.end(), D.begin(), D.end());
   }
+  TypeAliasMap AliasMap;
+  ASTContext &ASTCtx = Clang->getASTContext();
+  findAliasesInContext(ASTCtx.getTranslationUnitDecl(), AliasMap);
   ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),
                    std::move(Clang), std::move(Action), std::move(Tokens),
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
-                   std::move(Diags), std::move(Includes), std::move(PI));
+                   std::move(Diags), std::move(Includes), std::move(PI),
+                   std::move(AliasMap));
   llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents, *Inputs.TFS),
              std::back_inserter(Result.Diags));
   return std::move(Result);
@@ -854,14 +875,15 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, IncludeStructure Includes,
-                     include_cleaner::PragmaIncludes PI)
+                     include_cleaner::PragmaIncludes PI, TypeAliasMap AliasMap)
     : TUPath(TUPath), Version(Version), Preamble(std::move(Preamble)),
       Clang(std::move(Clang)), Action(std::move(Action)),
       Tokens(std::move(Tokens)), Macros(std::move(Macros)),
       Marks(std::move(Marks)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), PI(std::move(PI)),
-      Resolver(std::make_unique<HeuristicResolver>(getASTContext())) {
+      Resolver(std::make_unique<HeuristicResolver>(getASTContext())),
+      AliasMap(std::move(AliasMap)) {
   assert(this->Clang);
   assert(this->Action);
 }
