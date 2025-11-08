@@ -89,8 +89,13 @@ struct HoverInfo {
   std::optional<std::vector<Param>> Parameters;
   /// Set for all templates(function, class, variable).
   std::optional<std::vector<Param>> TemplateParameters;
+  /// A string representing the specialized template arguments,
+  /// e.g. "<int, int>".
+  std::optional<std::string> SpecializedTemplateArgs;
   /// Contains the evaluated value of the symbol if available.
   std::optional<std::string> Value;
+  /// Contains the evaluated value of an enclosing expression.
+  std::optional<std::string> ExpressionValue;
   /// Contains the bit-size of fields and types where it's interesting.
   std::optional<uint64_t> Size;
   /// Contains the offset of fields within the enclosing class.
@@ -117,6 +122,23 @@ struct HoverInfo {
   // from a #include'd file that are used in the main file, sorted in
   // alphabetical order.
   std::vector<std::string> UsedSymbolNames;
+
+  bool IsInline = false;
+  bool IsVirtual = false;
+  bool IsOverride = false;
+  bool IsFinal = false;
+  bool IsConst = false;
+  RefQualifierKind RefQualifier = RQ_None;
+  /// Set for variables.
+  std::optional<std::string> Initializer;
+  bool HasTrailingReturn = false;
+  bool IsStatic = false;
+  bool IsConstexpr = false;
+  bool IsConsteval = false;
+  bool IsBitfield = false;
+  bool IsDefaulted = false;
+  bool IsEnumClass = false;
+  std::optional<std::string> Noexcept;
 
   /// Produce a user-readable information.
   markup::Document present() const;
