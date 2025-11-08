@@ -297,8 +297,9 @@ NestedNameSpecifier::translateToType(const ASTContext &Context) const {
 void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
                                 bool ResolveTemplateArguments,
                                 bool PrintFinalScopeResOp) const {
-  if (getPrefix())
-    getPrefix()->print(OS, Policy);
+  NestedNameSpecifier *Prefix = getPrefix();
+  if (Prefix)
+    Prefix->print(OS, Policy);
 
   switch (getKind()) {
   case Identifier:
@@ -309,11 +310,17 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
     if (getAsNamespace()->isAnonymousNamespace())
       return;
 
-    OS << getAsNamespace()->getName();
+    if (Prefix)
+      OS << getAsNamespace()->getName();
+    else
+      getAsNamespace()->printQualifiedName(OS, Policy);
     break;
 
   case NamespaceAlias:
-    OS << getAsNamespaceAlias()->getName();
+    if (Prefix)
+      OS << getAsNamespaceAlias()->getName();
+    else
+      getAsNamespaceAlias()->printQualifiedName(OS, Policy);
     break;
 
   case Global:
@@ -326,7 +333,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
 
   case TypeSpec: {
     PrintingPolicy InnerPolicy(Policy);
-    InnerPolicy.SuppressScope = true;
+    if (Prefix)
+      InnerPolicy.SuppressScope = true;
     InnerPolicy.SuppressTagKeyword = true;
     QualType(getAsType(), 0).print(OS, InnerPolicy);
     break;

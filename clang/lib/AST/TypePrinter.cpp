@@ -1460,9 +1460,9 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
   } else if (const auto *Tag = dyn_cast<TagDecl>(DC)) {
     AppendScope(DC->getParent(), OS, Tag->getDeclName());
     if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
-      OS << Typedef->getIdentifier()->getName() << "::";
+      OS << Typedef->getASTContext().getTypeDeclType(Tag).getAsString() << "::";
     else if (Tag->getIdentifier())
-      OS << Tag->getIdentifier()->getName() << "::";
+      OS << Tag->getASTContext().getTypeDeclType(Tag).getAsString() << "::";
     else
       return;
   } else {
@@ -1740,6 +1740,10 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     }
     if (Qualifier)
       Qualifier->print(OS, Policy);
+    else {
+      printBefore(T->getNamedType(), OS);
+      return;
+    }
   }
 
   ElaboratedTypePolicyRAII PolicyRAII(Policy);
@@ -1751,7 +1755,7 @@ void TypePrinter::printElaboratedAfter(const ElaboratedType *T,
   if (Policy.IncludeTagDefinition && T->getOwnedTagDecl())
     return;
 
-  if (Policy.SuppressElaboration) {
+  if (Policy.SuppressElaboration || T->getQualifier()) {
     printAfter(T->getNamedType(), OS);
     return;
   }

@@ -319,8 +319,10 @@ TemplateNameDependence DependentTemplateStorage::getDependence() const {
 
 void DependentTemplateStorage::print(raw_ostream &OS,
                                      const PrintingPolicy &Policy) const {
-  if (NestedNameSpecifier *NNS = getQualifier())
-    NNS->print(OS, Policy);
+  if (!Policy.SuppressScope) {
+    if (NestedNameSpecifier *NNS = getQualifier())
+      NNS->print(OS, Policy);
+  }
 
   if (hasTemplateKeyword())
     OS << "template ";
@@ -444,8 +446,9 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
       return;
     }
     if (NestedNameSpecifier *NNS = QTN->getQualifier();
-        Qual != Qualified::None && NNS)
+        Qual != Qualified::None && NNS && !Policy.SuppressScope) {
       NNS->print(OS, Policy);
+    }
     if (QTN->hasTemplateKeyword())
       OS << "template ";
 
@@ -462,6 +465,8 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
         Policy.CleanUglifiedParameters && II &&
         isa<TemplateTemplateParmDecl>(UTD))
       OS << II->deuglifiedName();
+    else if (!Policy.SuppressScope)
+      UTD->printQualifiedName(OS);
     else
       OS << *UTD;
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
