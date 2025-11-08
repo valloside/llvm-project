@@ -1631,6 +1631,26 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
+  else {
+    // No `target` option provided, but the driver is gcc in windows.
+    llvm::Triple HostTriple(TargetTriple);
+    if (HostTriple.isWindowsMSVCEnvironment()) {
+      StringRef DriverName = llvm::sys::path::stem(Name);
+      if (DriverName == "gcc" || DriverName == "g++") {
+        llvm::SmallString<128> CygwinCheckPath(Dir);
+        llvm::sys::path::append(CygwinCheckPath, "cygwin1.dll");
+        llvm::Triple NewTriple(HostTriple);
+        if (getVFS().exists(CygwinCheckPath)) {
+          NewTriple.setEnvironment(llvm::Triple::Cygnus);
+          TargetTriple = NewTriple.str();
+        } else {
+          // assume it's MinGW
+          NewTriple.setEnvironment(llvm::Triple::GNU);
+          TargetTriple = NewTriple.str();
+        }
+      }
+    }
+  }
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
     Dir = Dir = A->getValue();
   for (const Arg *A : Args.filtered(options::OPT_B)) {
