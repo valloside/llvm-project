@@ -1636,7 +1636,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     llvm::Triple HostTriple(TargetTriple);
     if (HostTriple.isWindowsMSVCEnvironment()) {
       StringRef DriverName = llvm::sys::path::stem(Name);
-      if (DriverName == "gcc" || DriverName == "g++") {
+      if (DriverName == "gcc" || DriverName == "g++" || DriverName == "clang" ||
+          DriverName == "clang++") {
         llvm::SmallString<128> CygwinCheckPath(Dir);
         llvm::sys::path::append(CygwinCheckPath, "cygwin1.dll");
         llvm::Triple NewTriple(HostTriple);
