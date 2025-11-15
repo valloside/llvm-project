@@ -1415,6 +1415,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
       HI.IsFinal = Method->hasAttr<FinalAttr>();
       if (PrettyType) {
         QualType PrettyTypeNonConst = *PrettyType;
+        if (PrettyTypeNonConst->isPointerType())
+          PrettyTypeNonConst = PrettyTypeNonConst->getPointeeType();
         PrettyTypeNonConst.removeLocalConst();
         HI.LocalScope.clear();
         HI.NamespaceScope.reset();
@@ -1451,7 +1453,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
         });
         fillFunctionTypeAndParams(HI, D, FD, PP, Simplifier);
         Simplifier.popLocalTypeAlias(Count);
-      }
+      } else
+        fillFunctionTypeAndParams(HI, D, FD, PP, Simplifier);
     } else
       fillFunctionTypeAndParams(HI, D, FD, PP, Simplifier);
   } else if (const auto *VD = dyn_cast<ValueDecl>(D)) {
