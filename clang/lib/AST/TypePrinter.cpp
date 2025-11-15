@@ -1459,12 +1459,19 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
     OS << "::";
   } else if (const auto *Tag = dyn_cast<TagDecl>(DC)) {
     AppendScope(DC->getParent(), OS, Tag->getDeclName());
+    bool PrevSuppressTagKeyword = Policy.SuppressTagKeyword;
+    Policy.SuppressTagKeyword = true;
     if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
-      OS << Typedef->getASTContext().getTypeDeclType(Tag).getAsString() << "::";
+      OS << Typedef->getASTContext().getTypeDeclType(Tag).getAsString(Policy)
+         << "::";
     else if (Tag->getIdentifier())
-      OS << Tag->getASTContext().getTypeDeclType(Tag).getAsString() << "::";
-    else
+      OS << Tag->getASTContext().getTypeDeclType(Tag).getAsString(Policy)
+         << "::";
+    else {
+      Policy.SuppressTagKeyword = PrevSuppressTagKeyword;
       return;
+    }
+    Policy.SuppressTagKeyword = PrevSuppressTagKeyword;
   } else {
     AppendScope(DC->getParent(), OS, NameInScope);
   }
